@@ -1,3 +1,6 @@
+# The student manager is made so that our results are compatible with a demonstration for students.
+# The demo for students is in HTML. So all the answers and tables are compatible with HTML.
+
 from .bridge_manager import Bridge
 from .beam_manager import open_beam_library, sublibrary
 from IPython.display import HTML, display
@@ -17,15 +20,58 @@ library_name = 'default'
 # ------------------------------------------------------------------------------------
 
 class project:
+    """
+    The student manager provides the results of the Continuum Mechanics problem 
+        in the same way as done during the lectures.
+
+    Attributes: 
+        struc (object): Initiates a new bridge object using the bridge_manager.
+        K_local (array): The local K-matrices in the local reference frame.
+        K_trans (array): The transformed K-matrices in the global reference frame.
+        K_gl (array):  All the K_matrices combined for the total K-matrix of the structure.
+
+        K_RR (array): The seperation of the K-matrix. 
+        K_RG (array): The seperation of the K-matrix. 
+        K_GR (array): The seperation of the K-matrix. 
+        K_GG (array): The seperation of the K-matrix. 
+
+        dR_indices (array): The indices of the unknown but required displacements.
+        dG_indices (array): The indices of the known displacements.
+        d_full (array): All the displacements.
+        dG (array): All the known displacements.
+        dR (array): All the unknown being calculated displacements.
+        f_full (array): All the forces.
+        fG (array): All the unknown forces.
+        fR (array): All the known forces.
+        
+        R_mes (array): All the measured resistances with the myDAQ.
+        x_mes (array): All the positions measured with the myDAQ.
+        u_mes (array): All the displacements measured with the myDAQ.
+
+    Methods:
+        construct: Constructs the structure from the bridge manager.
+        properties: It makes a table with all the properties of the chosen beams for the student.
+        K_local: Retrieves the calculated local stiffness matrices for all currently selected beams.
+        K_local_transformed: This is a helper function that calculates the K_transformed matrix.
+        K_global: This function calculates the global K_matrix.
+        theory: Solves the truss system. All the displacements and forces are being displayed.
+        f_theory: Purely visualises a table with all the forces, that the students apply.
+        d_theory: Purely visualises a table with all the displacements according to theory.
+        Display matrices: Displays all the theoretical answers, with an animation.
+        measure: Uses the 'sweep' function from the bridge manager to reveal the results of the measurements.
+        plot: Plots the theory.
+        
+        invert: Making a function for students to automatically invert matrices.
+    """
 
     def __init__(self):
 
         self.struc = Bridge()
 
+        self.K_local = None
         self.K_trans = None
         self.K_gl = None
-        self.K_local = None
-
+        
         self.K_RR = None
         self.K_RG = None
         self.K_GR = None
@@ -48,8 +94,8 @@ class project:
 
     def construct(self, selection:list, topology:list, rigid:int=0):
         """
+        Constructs the structure from the bridge manager.
         """
-
         self.__init__()
 
         library = open_beam_library(library_name + '.json')
@@ -61,8 +107,11 @@ class project:
 
 
     def properties(self):
+        """
+        It makes a table with all the properties of the chosen beams for the student.
+        """
         beams = list(self.struc.library.values())
-
+        
         table_data = []
         for beam in beams:
             table_data.append([beam.ID, beam.type, "192", f"{round(beam.l_0, 1)}"])
@@ -92,6 +141,24 @@ class project:
 
         plt.tight_layout()
         plt.show()
+     
+    def local_K(self, decimal_places: int = 2):
+        """
+        Retrieves the calculated local stiffness matrices for all currently selected 
+        elements and displays them side-by-side using the HTML helper pipeline.
+        """
+        display_payload = {}
+        beams = list(self.struc.library.values())
+        K_loc = [[1, -1], [-1, 1]]
+
+        for beam in beams:
+            k = beam.k # stiffness (float)
+            ID = beam.ID # beam ID (str)
+
+            scalar_prefix = f"{float(k):.{decimal_places}f}".rstrip('0').rstrip('.')
+            display_payload[ID] = (K_loc, scalar_prefix)
+        
+        self.display_matrices(display_payload, decimal_places=decimal_places)
 
     def K_local_transformed(self):
 
@@ -157,17 +224,17 @@ class project:
         conditions, using a uniform or independent directional force magnitude.
 
         Parameters:
-        -----------
-        nodes : int or tuple/list of len() == 2
+        Nodes:
             The target node(s) where the pulley forces are applied. 
             - If an int: Both X and Y pulley lines connect to this single node.
             - If a tuple/list: nodes[0] gets the X force, nodes[1] gets the Y force.
-        force : float, list, tuple, or np.ndarray
+        Force: 
             The applied force magnitude(s) in Newtons.
             - If a single float/int: Applied equally to both active X and Y pulley strings.
             - If a sequence of len()==2: Index 0 is the X force magnitude, Index 1 is the Y force magnitude.
         """
-        # 1. Validate and Parse Target Nodes
+
+        # Validate and Parse Target Nodes
         if isinstance(nodes, (tuple, list)):
             if len(nodes) != 2:
                 raise ValueError("The 'nodes' sequence argument must contain exactly 2 target node indices [node_x, node_y].")
@@ -177,7 +244,7 @@ class project:
         else:
             raise TypeError("The 'nodes' argument must be an integer or a sequence (tuple/list) of 2 integers.")
 
-        # 2. New Validation Logic: Parse Force Parameter
+        # New Validation Logic: Parse Force Parameter
         if isinstance(force, (list, tuple, np.ndarray)):
             if len(force) != 2:
                 raise ValueError("If 'force' is specified as a sequence, it must contain exactly 2 items: [force_x, force_y].")
@@ -215,7 +282,7 @@ class project:
         # Build global load vector using parsed components
         f_full = apply_forces(n_dof, target_x_node, target_y_node, fx_mag, fy_mag)
         
-        # --- Remaining partitioning, sorting, and plotting code stays exactly the same ---
+        # Remaining partitioning, sorting, and plotting code stays exactly the same
         fR = f_full[dR_indices]
         self.fR = fR
 
@@ -241,6 +308,7 @@ class project:
         F_full[dG_indices] = fG
         self.f_full = F_full
         
+        # Creates the option to reveal a table with all the answers.
         if table is True:
             print("\nRESULTATEN:")
             print(f"{'Node':<6} {'ux (mm)':<12} {'uy (mm)':<12} {'fx (N)':<12} {'fy (N)':<12}")
@@ -259,95 +327,30 @@ class project:
         self.K_GR = K_GR
         self.K_GG = K_GG
         
-    def plot(self, x:list=None, anim:bool=False):
-
-        if x is None:
-            deformed = np.any(self.struc.current_x != self.struc.x_init)
-        else:
-            deformed = np.any(x != self.struc.x_init)
-
-        if anim and not deformed:
-            print('Animated results are not available for the undeformed structure.')
-            self.struc.x_plot(x)
-        elif anim and deformed:
-            anim = self.struc.x_plot(x, anim=True)
-            display(HTML(anim.to_jshtml()))
-        else:
-            self.struc.x_plot(x)
-
-    def measure(self, save_filename, settings:dict=None, anim:bool=False):
-
-        default_settings = { 
-            'freqsteps': self.struc.k * 100,
-            'resonance_sweep': True, 
-            'geo_constraint': True,
-            'max_iter': 500
-        }
-
-        if settings is None:
-            settings = default_settings
-        else:
-            default_settings.update(settings)
-            settings = default_settings
-
-        freqsteps       = settings['freqsteps']
-        resonance_sweep = settings['resonance_sweep']
-        geo_constraint  = settings['geo_constraint']
-        max_iter         = settings['max_iter']
-
-        R_mes, x_mes = self.struc.sweep(R_ref, freqsteps=freqsteps, myDAQ=True, myDAQlog=None, save_filename=save_filename,
-                                         resonance_sweep=resonance_sweep, geo_constraint=geo_constraint, max_iter=max_iter)     
-        self.R_mes = R_mes
-        self.struc.current_x = x_mes
-        self.x_mes = x_mes
-
-        u_mes = x_mes - self.struc.x_init
-        self.u_mes = u_mes
-
-        self.plot(anim=anim)
-
-    def local_K(self, decimal_places: int = 2):
-        """
-        Retrieves the calculated local stiffness matrices for all currently selected 
-        elements and displays them side-by-side using the HTML helper pipeline.
-        """
-        display_payload = {}
-        beams = list(self.struc.library.values())
-        K_loc = [[1, -1], [-1, 1]]
-
-        for beam in beams:
-            k = beam.k # stiffness (float)
-            ID = beam.ID # beam ID (str)
-
-            scalar_prefix = f"{float(k):.{decimal_places}f}".rstrip('0').rstrip('.')
-            display_payload[ID] = (K_loc, scalar_prefix)
-        
-        self.display_matrices(display_payload, decimal_places=decimal_places)
-
     def f_theory(self, nodes, force: float):
         """
         Runs the system solver, constructs a symbolic global force vector 'f' 
         containing numerical active loads and unknown boundary reaction variables, 
         and displays it cleanly via the HTML matrix pipeline.
         """
-        # 1. Run the structural solver to populate the internal indices and partitions
+        # Run the structural solver to populate the internal indices and partitions
         self.theory(nodes=nodes, force=force, anim=False, table=False)
         
         n_dof = 2 * self.struc.n
         f_symbolic = [0] * n_dof
         
-        # 2. Fill in the known applied forces from the solver's load vector
+        # Fill in the known applied forces from the solver's load vector
         for idx in self.dR_indices:
             f_symbolic[idx] = self.f_full[idx]
             
-        # 3. FIX: Create clean HTML strings instead of SymPy symbols
+        # FIX: Create clean HTML strings instead of SymPy symbols
         for idx in self.dG_indices:
             node_num = idx // 2
             direction = "x" if idx % 2 == 0 else "y"
             # Format using standard italics and subscripts just like the rest of the UI
             f_symbolic[idx] = f"<i>F</i><sub>{direction}{node_num}</sub>"
             
-        # 4. Pass the column vector layout data directly to display_matrices
+        # Pass the column vector layout data directly to display_matrices
         f_vector_data = [[item] for item in f_symbolic]
         
         display_payload = {
@@ -369,26 +372,26 @@ class project:
         n_dof = 2 * self.struc.n
         d_symbolic = [0] * n_dof
         
-        # 1. Fill in the known boundary displacements (e.g., 0 for rigid nodes)
+        # Fill in the known boundary displacements (e.g., 0 for rigid nodes)
         for idx in self.dG_indices:
             d_symbolic[idx] = self.d_full[idx]
             
-        # 2. Fill in the unknown free displacements with clean HTML symbolic variables
+        # Fill in the unknown free displacements with clean HTML symbolic variables
         for idx in self.dR_indices:
             node_num = idx // 2
             direction = "x" if idx % 2 == 0 else "y"
             # Format using standard italics and subscripts just like the force vector
             d_symbolic[idx] = f"<i>u</i><sub>{direction}{node_num}</sub>"
             
-        # 3. Convert the flat list into a column vector layout (N_dof x 1 list of lists)
+        # Convert the flat list into a column vector layout (N_dof x 1 list of lists)
         d_vector_data = [[item] for item in d_symbolic]
         
-        # 4. Package it into our standard dictionary payload format
+        # Package it into our standard dictionary payload format
         display_payload = {
             "Global Displacement Vector (d)": d_vector_data
         }
         
-        # 5. Render using your updated CSS-border HTML layout helper
+        # Render using your updated CSS-border HTML layout helper
         self.display_matrices(display_payload, decimal_places=1)
 
 
@@ -450,7 +453,61 @@ class project:
         html += '</div>'
         display(HTML(html))
 
+    def measure(self, save_filename, settings:dict=None, anim:bool=False):
+
+        default_settings = { 
+            'freqsteps': self.struc.k * 100,
+            'resonance_sweep': True, 
+            'geo_constraint': True,
+            'max_iter': 500
+        }
+
+        if settings is None:
+            settings = default_settings
+        else:
+            default_settings.update(settings)
+            settings = default_settings
+
+        freqsteps       = settings['freqsteps']
+        resonance_sweep = settings['resonance_sweep']
+        geo_constraint  = settings['geo_constraint']
+        max_iter         = settings['max_iter']
+
+        R_mes, x_mes = self.struc.sweep(R_ref, freqsteps=freqsteps, myDAQ=True, myDAQlog=None, save_filename=save_filename,
+                                         resonance_sweep=resonance_sweep, geo_constraint=geo_constraint, max_iter=max_iter)     
+        self.R_mes = R_mes
+        self.struc.current_x = x_mes
+        self.x_mes = x_mes
+
+        u_mes = x_mes - self.struc.x_init
+        self.u_mes = u_mes
+
+        self.plot(anim=anim)
+
+    def plot(self, x:list=None, anim:bool=False):
+        """
+        General plot function, used by theory and measurements.
+        """
+
+        if x is None:
+            deformed = np.any(self.struc.current_x != self.struc.x_init)
+        else:
+            deformed = np.any(x != self.struc.x_init)
+
+        if anim and not deformed:
+            print('Animated results are not available for the undeformed structure.')
+            self.struc.x_plot(x)
+        elif anim and deformed:
+            anim = self.struc.x_plot(x, anim=True)
+            display(HTML(anim.to_jshtml()))
+        else:
+            self.struc.x_plot(x)
+
 def invert(matrix):
+    """
+    Making a function for students to automatically invert matrices,
+        so they do not have to work everything manually.
+    """
 
     m, n = np.array(matrix).shape
     if m != n:
