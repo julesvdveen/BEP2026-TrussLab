@@ -160,7 +160,7 @@ class Bridge:
 
     def U_plot(self, f_arr, U):
         """
-        Plotting the U_out
+        Plotting the U_out.
         """
 
         U_out_mag = np.abs(U)
@@ -226,7 +226,7 @@ class Bridge:
         # Define cost function:
         def cost(x_R):
             """
-            Saving 
+            Cost function for the geometric error, e_geo. 
             """
 
             # Construct full position vector:
@@ -299,6 +299,9 @@ class Bridge:
 
         # Define cost function:
         def cost(x_R):
+            """
+            Cost function for e_geo.
+            """
             # Construct full position vector:
             x_0 = np.zeros(2) # Assign coordinate system origin to 0-th node.
             if self.rigid:
@@ -319,6 +322,9 @@ class Bridge:
             return np.sum(gem_err_individual_squared)
         
         def constraint_min_distance(x_R):
+            """"
+            Minimal distance constraint for truss nodes, with respect to each other.
+            """"
             x_0 = np.zeros(2)
             if self.rigid:
                 x = np.concatenate((x_0, x_R, [x_n], [0]))
@@ -371,6 +377,9 @@ class Bridge:
         return x
 
     def x_plot(self, x=None, anim=False):
+        """
+        Plots measurement or algebraic calculation results in convenient graphs or (in case of deformation calculations) animations.
+        """
     
         if x is None:
             x = self.current_x
@@ -560,7 +569,7 @@ class Bridge:
 
         def animate_truss(x_final, scale=1.0, n_frames=60, interval=30):
 
-            x_init = np.asarray(self.x_init, dtype=float) # Jules dit was jij!!!!
+            x_init = np.asarray(self.x_init, dtype=float)
             x_final = np.asarray(x_final, dtype=float)
 
             coords_init = x_init.reshape(-1, 2)
@@ -642,7 +651,29 @@ class Bridge:
 
     def sweep(self, R_ref, f_logrange=(3, np.log10(2e4)), freqsteps=1000, myDAQ=False, myDAQlog=None, resonance_sweep=False, geo_constraint=False, 
                   max_iter=500, position_plot=False, error_plot=False, response_comparison_plot=False, **kwargs):
+        """
+        This function runs the measurement sweep through the TrussLab module.
+
+        Arguments:
+        - R_ref (float): reference resistor, to measure the output signal (Ohms)
+        - f_logrange (tuple): states the frequency range (logscale) to be considered by the algorithm.
+        - freqsteps (int): number of swept frequencies.
+        - myDAQ (bool): if True, assumes myDAQ measurements as output data. if False, new data is simulated.
+        - myDAQlog (str): (optional) load old measurements to review algorithm outputs. If None, a new measurement is performed.
+        - resonance_sweep (bool): solver option, to limit frequency sweeping to information-dense frequencies, instead of the 
+                                  full frequency domain.
+        - geo_constraint (bool): solver option, to limit the positional searching space to geometrically viable nodal positions.
+        - max_iter (int): maximum number of differential evolution iterations.
+        - position_plot (bool): if True, return a plot (drawing) of the measured truss, including tabulated positional data.
+        - error_plot (bool): if True, return a plot of the error landscape for beams R_var = [...].
+        - response_comparison_plot (bool): if True, return a plot comparing the algorithm signal fit to measured results.
+        - kwargs: optional parameters for customized solver options (inspect code below).
+
+        Returns:
+        - R_mes (list): measured resistance values in Ohms, following the order of the beam library loaded.
+        - x_mes (list): measured position vector for all nodes in the structure.
         
+        """
         # ----------------------------------------------------------------------
         # STEP 0: INITIALISATION
         # ----------------------------------------------------------------------
