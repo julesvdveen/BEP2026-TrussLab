@@ -1,4 +1,4 @@
-# TrussLab; an Interactive Introduction to FEM - Code Repository
+# TrussLab: an Interactive Introduction to FEM - Code Repository
 
 Welcome to the Git repository for the **TrussLab BEP 2026 project**. For the faculty of mechanical engineering, TrussLab was developed during a Bachelor final project to be used during Continuum Mechanics practise sessions. TrussLab was developed to enable students to build and analyse their own truss structures. The toolbox offers several features: students can construct trusses, deform them by applying custom loads, assign structure constraints (e.g. rigid or single DOF connections), and both analytically estimate and automatically measure the nodal displacements. This last feature enables students to compare algebraic calculations to experimental measurements, and to identify the limitations of the theory they learn during the lectures.
 
