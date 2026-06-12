@@ -6,7 +6,7 @@ class Beam:
     Beam class to save all beam data into a single object.
 
     Attributes:
-        filter (str): filter topology, one of ['serie', 'notch', 'BVD', 'R'].
+        filter (stfuvkr): filter topology, one of ['serie', 'notch', 'BVD', 'R'].
         L (float): inductance of the coil in Henry.
         C (list): capacitance value(s) in Farad. For 'serie' and 'notch' filters, a single value is expected. For 'BVD', provide [C_s, C_p].
         R_0 (float): initial (undeformed) resistance of the beam in Ohm.
